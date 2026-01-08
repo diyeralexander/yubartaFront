@@ -196,9 +196,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Fetch all data from API
-  const fetchAllData = useCallback(async () => {
+  const fetchAllData = useCallback(async (isBackgroundRefresh = false) => {
     try {
       const [
         usersData,
@@ -223,9 +224,17 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       setMarketplaceListings(parseDates(listingsData));
       setPurchaseOffers(parseDates(purchaseOffersData));
       setError(null);
+      setInitialLoadComplete(true);
     } catch (err: any) {
       console.error('Failed to fetch data:', err);
-      setError(err.message || 'Failed to connect to server');
+      // Only show error on initial load, not on background refreshes
+      // This prevents the app from breaking when API is temporarily unavailable
+      if (!isBackgroundRefresh) {
+        setError(err.message || 'Failed to connect to server');
+      } else {
+        // Log but don't disrupt the user experience on background refresh
+        console.warn('Background data refresh failed, keeping existing data');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -233,17 +242,19 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
   // Initial data load
   useEffect(() => {
-    fetchAllData();
+    fetchAllData(false); // Not a background refresh
   }, [fetchAllData]);
 
-  // Polling for real-time sync (every 5 seconds)
+  // Polling for real-time sync (every 10 seconds instead of 5)
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchAllData();
-    }, 5000);
+      if (initialLoadComplete) {
+        fetchAllData(true); // Background refresh - don't show errors
+      }
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, [fetchAllData]);
+  }, [fetchAllData, initialLoadComplete]);
 
   // ============ API CRUD Functions ============
 

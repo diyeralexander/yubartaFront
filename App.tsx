@@ -20,23 +20,58 @@ const App = () => {
 };
 
 const AppContent = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  
+  // Initialize currentUser from localStorage if available
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const savedUser = localStorage.getItem('yubarta_current_user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        // Convert date strings back to Date objects
+        if (parsed.createdAt) parsed.createdAt = new Date(parsed.createdAt);
+        if (parsed.lastActivity) parsed.lastActivity = new Date(parsed.lastActivity);
+        return parsed as User;
+      }
+    } catch (e) {
+      console.error('Error loading user from localStorage:', e);
+      localStorage.removeItem('yubarta_current_user');
+    }
+    return null;
+  });
+
   // Updated state type to include ADMIN_DASHBOARD
-  const [activeModule, setActiveModule] = useState<'SELECTION' | 'SOURCING' | 'MARKETPLACE' | 'ADMIN_DASHBOARD'>('SELECTION');
+  const [activeModule, setActiveModule] = useState<'SELECTION' | 'SOURCING' | 'MARKETPLACE' | 'ADMIN_DASHBOARD'>(() => {
+    try {
+      const savedUser = localStorage.getItem('yubarta_current_user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        return parsed.role === Role.ADMIN ? 'ADMIN_DASHBOARD' : 'SELECTION';
+      }
+    } catch (e) {}
+    return 'SELECTION';
+  });
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  
+
   // New State for Contextual Help
   const [helpModule, setHelpModule] = useState<'SOURCING' | 'MARKETPLACE' | null>(null);
 
   // Notifications Hook
   const stats = useNotificationStats(currentUser);
 
+  // Save user to localStorage whenever it changes
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('yubarta_current_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('yubarta_current_user');
+    }
+  }, [currentUser]);
+
   // Authentication Handler
   const handleAuthSuccess = (user: User, isNewRegistration: boolean) => {
       setCurrentUser(user);
-      
+      localStorage.setItem('yubarta_current_user', JSON.stringify(user));
+
       if (user.role === Role.ADMIN) {
           setActiveModule('ADMIN_DASHBOARD');
       } else {
@@ -47,6 +82,13 @@ const AppContent = () => {
               localStorage.setItem('yubarta_onboarding_seen', 'true');
           }
       }
+  };
+
+  // Logout handler - clear localStorage
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('yubarta_current_user');
+    setActiveModule('SELECTION');
   };
 
   const handleOnboardingComplete = () => {
@@ -249,7 +291,7 @@ const AppContent = () => {
                         <div className="h-6 w-px bg-[#D6D6D6] mx-1"></div>
                         
                         <button
-                            onClick={() => setCurrentUser(null)}
+                            onClick={handleLogout}
                             className="p-2.5 rounded-full text-[#7A7A7A] hover:bg-[#FCEAEA] hover:text-[#B63A3A] transition-colors"
                             title="Cerrar Sesión"
                         >
