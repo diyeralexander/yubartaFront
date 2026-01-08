@@ -57,6 +57,12 @@ const OfferForm = ({ requirement, initialData, onSubmit, onCancel, submitButtonT
     // Date Helper
     const todayString = new Date().toISOString().split('T')[0];
 
+    // Calculate valid date range for offer
+    // The offer start date can be today or later, but must be within requirement validity
+    const effectiveMinDate = requirement.vigenciaInicio > todayString ? requirement.vigenciaInicio : todayString;
+    // If requirement end date is in the past, allow future dates (admin override case)
+    const effectiveMaxDate = requirement.vigenciaFin < todayString ? '' : requirement.vigenciaFin;
+
     // State for granular price editing
     const [priceVariables, setPriceVariables] = useState<PriceVariable[]>([]);
     const [priceObservation, setPriceObservation] = useState('');
@@ -274,10 +280,10 @@ const OfferForm = ({ requirement, initialData, onSubmit, onCancel, submitButtonT
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // --- DATE VALIDATION ---
-        if (formData.fechaInicioVigencia < todayString) {
-            alert('La fecha de inicio de la oferta no puede ser anterior a la fecha actual.');
+        if (formData.fechaInicioVigencia < effectiveMinDate) {
+            alert(`La fecha de inicio de la oferta no puede ser anterior a ${effectiveMinDate}.`);
             return;
         }
 
@@ -285,10 +291,10 @@ const OfferForm = ({ requirement, initialData, onSubmit, onCancel, submitButtonT
             alert('La fecha de fin de vigencia no puede ser anterior a la fecha de inicio.');
             return;
         }
-        // -----------------------
 
-        if (formData.fechaFinVigencia > requirement.vigenciaFin) {
-            alert(`La fecha de fin de la oferta (${formData.fechaFinVigencia}) no puede ser posterior a la fecha de fin de la solicitud (${requirement.vigenciaFin}).`);
+        // Only validate max date if the requirement hasn't expired (admin override case)
+        if (effectiveMaxDate && formData.fechaFinVigencia > effectiveMaxDate) {
+            alert(`La fecha de fin de la oferta (${formData.fechaFinVigencia}) no puede ser posterior a la fecha de fin de la solicitud (${effectiveMaxDate}).`);
             return;
         }
         
@@ -352,32 +358,41 @@ const OfferForm = ({ requirement, initialData, onSubmit, onCancel, submitButtonT
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label htmlFor="fechaInicioVigencia" className={commonLabelClass}>Inicio Vigencia</label>
-                            <input 
-                                type="date" 
-                                name="fechaInicioVigencia" 
-                                id="fechaInicioVigencia" 
-                                value={formData.fechaInicioVigencia} 
-                                onChange={handleChange} 
-                                required 
+                            <input
+                                type="date"
+                                name="fechaInicioVigencia"
+                                id="fechaInicioVigencia"
+                                value={formData.fechaInicioVigencia}
+                                onChange={handleChange}
+                                required
                                 className={commonInputClass}
-                                min={todayString}
+                                min={effectiveMinDate}
+                                max={effectiveMaxDate || undefined}
                             />
-                            <p className="text-xs text-gray-500 mt-1">No puede ser anterior a hoy.</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                                {effectiveMaxDate
+                                    ? `Rango válido: ${effectiveMinDate} a ${effectiveMaxDate}`
+                                    : `Fecha mínima: ${effectiveMinDate}`}
+                            </p>
                         </div>
                         <div>
                             <label htmlFor="fechaFinVigencia" className={commonLabelClass}>Fin Vigencia</label>
-                            <input 
-                                type="date" 
-                                name="fechaFinVigencia" 
-                                id="fechaFinVigencia" 
-                                value={formData.fechaFinVigencia} 
-                                onChange={handleChange} 
-                                required 
+                            <input
+                                type="date"
+                                name="fechaFinVigencia"
+                                id="fechaFinVigencia"
+                                value={formData.fechaFinVigencia}
+                                onChange={handleChange}
+                                required
                                 className={commonInputClass}
-                                min={formData.fechaInicioVigencia || todayString}
-                                max={requirement.vigenciaFin}
+                                min={formData.fechaInicioVigencia || effectiveMinDate}
+                                max={effectiveMaxDate || undefined}
                             />
-                             <p className="text-xs text-gray-500 mt-1">Límite máximo según solicitud: {requirement.vigenciaFin}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                                {effectiveMaxDate
+                                    ? `Límite máximo: ${effectiveMaxDate}`
+                                    : 'Sin límite máximo (solicitud vencida - modo admin)'}
+                            </p>
                         </div>
                     </div>
                     
