@@ -1136,29 +1136,42 @@ const AdminDashboard = ({ currentUser }: AdminDashboardProps) => {
                             <RequirementForm onSubmit={handleCreateRequirementOnBehalf} onCancel={() => setIsFormOpen(false)} />
                         )
                     ) : (
-                        !selectedUserForAction ? (
+                        (!selectedUserForAction || !targetReqForOffer) ? (
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-2">1. Seleccionar Vendedor</label>
-                                    <select className="w-full p-3 border border-slate-300 rounded-xl" onChange={(e) => setSelectedUserForAction(e.target.value)}>
+                                    <select
+                                        className="w-full p-3 border border-slate-300 rounded-xl"
+                                        value={selectedUserForAction}
+                                        onChange={(e) => setSelectedUserForAction(e.target.value)}
+                                    >
                                         <option value="">Seleccione...</option>
                                         {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-2">2. Seleccionar Solicitud Objetivo</label>
-                                    <select className="w-full p-3 border border-slate-300 rounded-xl" onChange={(e) => setTargetReqForOffer(e.target.value)}>
+                                    <select
+                                        className="w-full p-3 border border-slate-300 rounded-xl"
+                                        value={targetReqForOffer}
+                                        onChange={(e) => setTargetReqForOffer(e.target.value)}
+                                    >
                                         <option value="">Seleccione...</option>
                                         {activeRequirements.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
                                     </select>
                                 </div>
-                                <Button disabled={!selectedUserForAction || !targetReqForOffer} onClick={() => {}} fullWidth>Confirmar Selección (Formulario abajo)</Button>
+                                {selectedUserForAction && targetReqForOffer && (
+                                    <p className="text-sm text-green-600 font-medium">✓ Selección completa. El formulario aparecerá automáticamente.</p>
+                                )}
+                                {(!selectedUserForAction || !targetReqForOffer) && (
+                                    <p className="text-sm text-slate-500">Seleccione vendedor y solicitud para continuar.</p>
+                                )}
                             </div>
                         ) : (
-                            <OfferForm 
-                                requirement={requirements.find(r => r.id === targetReqForOffer)!} 
-                                onSubmit={handleCreateOfferOnBehalf} 
-                                onCancel={() => setIsFormOpen(false)} 
+                            <OfferForm
+                                requirement={requirements.find(r => r.id === targetReqForOffer)!}
+                                onSubmit={handleCreateOfferOnBehalf}
+                                onCancel={() => setIsFormOpen(false)}
                             />
                         )
                     )}
