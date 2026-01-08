@@ -245,13 +245,13 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     fetchAllData(false); // Not a background refresh
   }, [fetchAllData]);
 
-  // Polling for real-time sync (every 10 seconds instead of 5)
+  // Polling for real-time sync (every 60 seconds to reduce Firebase quota usage)
   useEffect(() => {
     const interval = setInterval(() => {
       if (initialLoadComplete) {
         fetchAllData(true); // Background refresh - don't show errors
       }
-    }, 10000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [fetchAllData, initialLoadComplete]);
